@@ -1,0 +1,72 @@
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import LabelEncoder
+from keras.layers import Input, Dense
+from keras.models import Model
+
+
+def preprocess_data(data):
+    # Perform label encoding for test cases and files modified
+    label_encoder = LabelEncoder()
+    data['test_case_encoded'] = label_encoder.fit_transform(data['test_failed'])
+    data['files_modified_encoded'] = label_encoder.fit_transform(data['files_modified'])
+
+    # Create a pivot table to transform the data into the required format for the autoencoder
+    pivot_table = data.pivot(index='test_case_encoded', columns='files_modified_encoded',
+                             values='files_modified_encoded').fillna(0)
+
+    return pivot_table.values, label_encoder
+
+
+def train_autoencoder(X_train):
+    # Define the dimensions of the input data
+    input_dim = X_train.shape[1]
+
+    # Define the autoencoder model architecture
+    input_layer = Input(shape=(input_dim,))
+    encoded = Dense(64, activation='relu')(input_layer)
+    decoded = Dense(input_dim, activation='sigmoid')(encoded)
+
+    # Compile the autoencoder model
+    autoencoder = Model(input_layer, decoded)
+    autoencoder.compile(optimizer='adam', loss='binary_crossentropy')
+
+    # Train the autoencoder model
+    autoencoder.fit(X_train, X_train, epochs=50, batch_size=32, shuffle=True)
+
+    return autoencoder
+
+
+def test_autoencoder(autoencoder, X_test):
+    # Use the trained autoencoder to reconstruct the input data
+    reconstructed_data = autoencoder.predict(X_test)
+
+    # Calculate the reconstruction error
+    reconstruction_error = np.mean(np.square(X_test - reconstructed_data), axis=1)
+
+    return reconstruction_error
+
+
+# Read the training data from CSV file
+train_data = pd.read_csv('train_data.csv')
+
+# Preprocess the training data
+X_train, label_encoder = preprocess_data(train_data)
+
+# Train the autoencoder
+autoencoder = train_autoencoder(X_train)
+
+# Read the testing data from CSV file
+test_data = pd.read_csv('test_data.csv')
+
+# Preprocess the testing data
+X_test, _ = preprocess_data(test_data)
+
+# Perform testing with the autoencoder and calculate the reconstruction error
+reconstruction_error = test_autoencoder(autoencoder, X_test)
+
+# Calculate the flakiness percentage
+threshold = 0.2  # Adjust this value as per your requirement
+flakiness_percentage = (reconstruction_error > threshold).mean() * 100
+
+print(f"Flakiness Percentage: {flakiness_percentage:.2f}%")
