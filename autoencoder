@@ -1,0 +1,343 @@
+import pandas as pd
+
+import numpy as np
+
+import tensorflow as tf
+
+from sklearn.preprocessing import MinMaxScaler, LabelEncoder
+
+from tensorflow.keras.models import Model, load_model
+
+from tensorflow.keras.layers import Input, Dense
+
+from tensorflow.keras.callbacks import ModelCheckpoint
+
+
+
+
+import pandas as pd
+
+
+
+
+def add_unique_authors_count(df):
+
+    # Group the DataFrame by 'files_modified' and count the unique authors
+
+    unique_authors_count = df.groupby('files_modified')['author'].nunique()
+
+
+
+
+    # Create a new DataFrame with the 'files_modified' and 'unique_authors_count' columns
+
+    result_df = pd.DataFrame({'files_modified': unique_authors_count.index,
+
+                              'unique_authors_count': unique_authors_count.values})
+
+
+
+
+    # Merge the new DataFrame with the original DataFrame based on 'files_modified'
+
+    df = pd.merge(df, result_df, on='files_modified', how='left')
+
+
+
+
+    return df
+
+
+
+
+# Example usage:
+
+
+
+
+
+
+
+
+
+def preprocess_data(file_path, le_author=None, le_files_modified=None, le_test_failed=None):
+
+    df = pd.read_csv(file_path)
+
+   
+
+    # Feature 1: Number of unique authors who have modified a file
+
+    # author_count = df.groupby('files_modified')['author'].nunique().reset_index(name='unique_author_count')
+
+    # # author_count=4-author_count
+
+    # df = df.merge(author_count, on='files_modified', how='left')
+
+    # print(df)
+
+
+
+
+    # #Feature 2: Number of unique test cases that have failed for a file
+
+    test_case_count = df.groupby('files_modified')['test_failed'].nunique().reset_index(name='unique_test_case_count')
+
+    df = df.merge(test_case_count, on='files_modified', how='left')
+
+    print(df)
+
+
+
+
+    # Feature 3: Test case failing without a code change
+
+    df['no_code_change'] = (df['files_modified'].isnull()).astype(int)
+
+    print(df)
+
+
+
+
+    # Feature 4: Interaction features
+
+    """
+
+    df['author_test_case_interaction'] = df['unique_author_count'] * df['unique_test_case_count']
+
+    df['author_no_code_change_interaction'] = df['unique_author_count'] * df['no_code_change']
+
+    df['test_case_no_code_change_interaction'] = df['unique_test_case_count'] * df['no_code_change']
+
+    print(df)
+
+    """
+
+
+
+
+    df = df.drop(columns=['author'])
+
+   
+
+    # df = df.drop(columns=['date', 'commit_sha'])
+
+
+
+
+    # if le_author is None:
+
+    #     le_author = LabelEncoder()
+
+    if le_files_modified is None:
+
+        le_files_modified = LabelEncoder()
+
+    if le_test_failed is None:
+
+        le_test_failed = LabelEncoder()
+
+
+
+
+    # df['author'] = le_author.fit_transform(df['author'])
+
+    df['files_modified'] = le_files_modified.fit_transform(df['files_modified'])
+
+    df['test_failed'] = le_test_failed.fit_transform(df['test_failed'])
+
+    print(df)
+
+    scaler = MinMaxScaler()
+
+    scaled_data = scaler.fit_transform(df)
+
+    return scaled_data, scaler, le_author, le_files_modified, le_test_failed
+
+
+
+
+def train_autoencoder_model(train_data):
+
+    input_dim = train_data.shape[1]
+
+    print(input_dim)
+
+    input_layer = Input(shape=(input_dim,))
+
+    print(input_layer)
+
+    """case - stack,denoising,sparse, deep"""
+
+    encoder = Dense(16, activation="relu")(input_layer)
+
+    encoder = Dense(8, activation="relu")(encoder)
+
+    # encoder = Dense(8, activation="relu")(encoder)
+
+    decoder = Dense(16, activation="relu")(encoder)
+
+    # decoder = Dense(16, activation="relu")(encoder) #extra
+
+    decoder = Dense(input_dim, activation="sigmoid")(decoder)
+
+    # decoder = Dense(input_dim, activation="softmax")(decoder)
+
+
+
+
+   
+
+
+
+
+ 
+
+
+
+
+    autoencoder = Model(inputs=input_layer, outputs=decoder)
+
+    autoencoder.compile(optimizer='adam', loss='mse')
+
+    from keras.utils.vis_utils import plot_model
+
+    print(autoencoder.summary())
+
+    # plot_model(autoencoder, to_file='model_plot.png', show_shapes=True, show_layer_names=True)
+
+
+
+
+ 
+
+
+
+
+    checkpoint = ModelCheckpoint(model_save_path, save_best_only=True, verbose=1)
+
+    autoencoder.fit(train_data, train_data, epochs=100, batch_size=32, shuffle=True, validation_split=0.2, callbacks=[checkpoint])
+
+
+
+
+ 
+
+
+
+
+    return autoencoder
+
+
+
+
+def predict_flaky_probability(autoencoder, test_data,df1,df2):
+
+ 
+
+    predictions = autoencoder.predict(test_data)
+
+   
+
+    # print(np.min(predictions))
+
+
+
+
+    mse = np.mean(np.power(test_data - predictions, 2), axis=1)
+
+    # mse = np.median(np.power(test_data - predictions, 2), axis=1)
+
+    # print(mse)
+
+    flaky_probability = mse / np.max(mse)
+
+    # print(flaky_probability)
+
+    # df1 = df1.drop(columns=['author',"test_failed"])
+
+    # df1=df1.drop_duplicates()
+
+    # merged_df = pd.merge(df2, df1, on='files_modified')
+
+    # print("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
+
+    # print(merged_df)
+
+    # unique_authors_count1=merged_df['unique_authors_count']
+
+    # # Divide the flaky probability by the number of unique authors for each file
+
+    # #flaky_probability /= unique_authors_count1
+
+    flaky_probability[np.isnan(flaky_probability)] = 0
+
+    print(flaky_probability)
+
+    return flaky_probability
+
+
+
+
+model_save_path = 'saved_model60datanew.h5'
+
+
+
+
+"""
+
+# Train the autoencoder model
+
+train_file_path = 'merged.csv'
+
+model_save_path = 'saved_model.h5'
+
+train_data, scaler, le_author, le_files_modified, le_test_failed = preprocess_data(train_file_path)
+
+autoencoder = train_autoencoder_model(train_data)
+
+autoencoder.save(model_save_path)
+
+
+
+
+ 
+
+
+
+
+# Load the trained model
+
+loaded_autoencoder = load_model(model_save_path)
+
+
+
+
+
+# Predict flaky probability for new test cases
+
+test_file_path = '51.csv'
+
+output_file_path = 'output_3_change_%.csv'
+
+test_data, _, _, _, _ = preprocess_data(test_file_path, le_author, le_files_modified, le_test_failed)
+
+flaky_probabilities = predict_flaky_probability(loaded_autoencoder, test_data)
+
+
+
+
+ 
+
+
+
+
+# Save the flaky probabilities to a CSV file
+
+test_cases = pd.read_csv(test_file_path)['test_failed']
+
+result = pd.DataFrame({'test_case': test_cases, 'flaky_probability': flaky_probabilities})
+
+result.to_csv(output_file_path, index=False)
+
+"""
