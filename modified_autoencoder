@@ -1,0 +1,86 @@
+import pandas as pd
+import numpy as np
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, Dense
+
+def preprocess_dataset(input_csv):
+    # Read the input CSV file
+    df = pd.read_csv(input_csv)
+    
+    # Drop the 'author' column
+    df.drop('author', axis=1, inplace=True)
+    
+    # Pivot the table and convert to the desired format
+    df_pivot = df.pivot(index='test_failed', columns='files_modified', values='value').fillna(0)
+    
+    # Reset the index
+    df_pivot.reset_index(inplace=True)
+    
+    return df_pivot
+
+
+def train_autoencoder(df):
+    # Convert the dataframe to numpy array
+    data = df.values
+
+    # Define the dimensions of the input data
+    input_dim = data.shape[1]
+
+    # Define the autoencoder model
+    input_layer = Input(shape=(input_dim,))
+    encoded = Dense(8, activation='relu')(input_layer)
+    decoded = Dense(input_dim, activation='sigmoid')(encoded)
+
+    autoencoder = Model(input_layer, decoded)
+
+    # Compile the model
+    autoencoder.compile(optimizer='adam', loss='binary_crossentropy')
+
+    # Train the autoencoder
+    autoencoder.fit(data, data, epochs=50, batch_size=16, shuffle=True)
+
+    return autoencoder
+
+
+def calculate_flakiness(autoencoder, test_csv):
+    # Read the test CSV file
+    test_df = pd.read_csv(test_csv)
+    
+    # Drop the 'author' column
+    test_df.drop('author', axis=1, inplace=True)
+    
+    # Pivot the table and convert to the desired format
+    test_df_pivot = test_df.pivot(index='test_failed', columns='files_modified', values='value').fillna(0)
+    
+    # Reorder the columns based on the training dataset
+    test_df_pivot = test_df_pivot.reindex(columns=df_pivot.columns, fill_value=0)
+    
+    # Convert the dataframe to numpy array
+    test_data = test_df_pivot.values
+    
+    # Calculate the flakiness percentage for each test case
+    flakiness_percentages = np.mean(np.abs(test_data - autoencoder.predict(test_data)), axis=1)
+    
+    # Create a new dataframe with the test cases and flakiness percentages
+    results_df = pd.DataFrame({'test_failed': test_df_pivot.index, 'flakiness_percentage': flakiness_percentages})
+    
+    return results_df
+
+
+def main():
+    # Preprocess the input dataset
+    df_pivot = preprocess_dataset('your_dataset.csv')
+
+    # Train the autoencoder
+    autoencoder = train_autoencoder(df_pivot)
+
+    # Test the flakiness percentage using a CSV file
+    test_csv = 'your_test_dataset.csv'  # Replace with the path to your test dataset CSV file
+    results = calculate_flakiness(autoencoder, test_csv)
+
+    # Display the results
+    print(results)
+
+
+if __name__ == '__main__':
+    main()
