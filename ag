@@ -1,0 +1,26 @@
+def train_autoencoder(training_data, save_path):
+    # Prepare the training dataset
+    X_train = training_data[0]  # Assuming the data is already preprocessed and encoded
+    training_columns = training_data[1]
+    # Normalize the training data
+    X_train = (X_train - np.min(X_train)) / (np.max(X_train) - np.min(X_train))
+
+    # Define the architecture of the autoencoder
+    input_dim = X_train.shape[1]
+    encoding_dim = 64
+
+    input_layer = tf.keras.Input(shape=(input_dim,))
+    encoder = tf.keras.layers.Dense(encoding_dim, activation='relu')(input_layer)
+    decoder = tf.keras.layers.Dense(input_dim, activation='sigmoid')(encoder)
+
+    # Create the autoencoder model
+    autoencoder = tf.keras.Model(inputs=input_layer, outputs=decoder)
+
+    # Compile the model
+    autoencoder.compile(optimizer='adam', loss='mean_squared_error')
+
+    # Train the autoencoder on the training set
+    autoencoder.fit(X_train, X_train, epochs=50, batch_size=32)
+
+    # Save the trained model
+    autoencoder.save(save_path)
