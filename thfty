@@ -1,0 +1,9 @@
+File "C:\Users\prateek.s28\Desktop\flaky\Flaky-Detector-1\a2.py", line 22, in train_autoencoder
+    X_train = training_data[0]  # Assuming the data is already preprocessed and encoded
+              ~~~~~~~~~~~~~^^^
+  File "C:\Users\prateek.s28\AppData\Roaming\Python\Python311\site-packages\pandas\core\frame.py", line 3761, in __getitem__
+    indexer = self.columns.get_loc(key)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\prateek.s28\AppData\Roaming\Python\Python311\site-packages\pandas\core\indexes\base.py", line 3654, in get_loc
+    raise KeyError(key) from err
+KeyError: 0
