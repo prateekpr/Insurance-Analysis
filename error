@@ -1,0 +1,94 @@
+PS C:\Users\prateek.s28\Desktop\flaky\Flaky-Detector-1> python a2.py
+Traceback (most recent call last):
+  File "C:\Users\prateek.s28\Desktop\flaky\Flaky-Detector-1\a2.py", line 78, in <module>
+    train_autoencoder(encoded_training_data, save_path="saved_model.h5")
+  File "C:\Users\prateek.s28\Desktop\flaky\Flaky-Detector-1\a2.py", line 24, in train_autoencoder
+    X_train = (X_train - np.min(X_train)) / (np.max(X_train) - np.min(X_train))
+               ~~~~~~~~^~~~~~~~~~~~~~~~~
+  File "C:\Users\prateek.s28\AppData\Roaming\Python\Python311\site-packages\pandas\core\ops\common.py", line 81, in new_method
+    return method(self, other)
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\prateek.s28\AppData\Roaming\Python\Python311\site-packages\pandas\core\arraylike.py", line 194, in __sub__
+    return self._arith_method(other, operator.sub)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\prateek.s28\AppData\Roaming\Python\Python311\site-packages\pandas\core\frame.py", line 7457, in _arith_method
+    new_data = self._dispatch_frame_op(other, op, axis=axis)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\prateek.s28\AppData\Roaming\Python\Python311\site-packages\pandas\core\frame.py", line 7484, in _dispatch_frame_op
+    bm = self._mgr.apply(array_op, right=right)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\prateek.s28\AppData\Roaming\Python\Python311\site-packages\pandas\core\internals\managers.py", line 350, in apply
+    applied = b.apply(f, **kwargs)
+              ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\prateek.s28\AppData\Roaming\Python\Python311\site-packages\pandas\core\internals\blocks.py", line 329, in apply
+    result = func(self.values, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\prateek.s28\AppData\Roaming\Python\Python311\site-packages\pandas\core\ops\array_ops.py", line 232, in arithmetic_op
+    res_values = _na_arithmetic_op(left, right, op)  # type: ignore[arg-type]
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+PS C:\Users\prateek.s28\Desktop\flaky\Flaky-Detector-1> python a2.py
+Traceback (most recent call last):
+  File "C:\Users\prateek.s28\Desktop\flaky\Flaky-Detector-1\a2.py", line 81, in <module>
+    train_autoencoder(encoded_training_data, save_path="saved_model.h5")
+  File "C:\Users\prateek.s28\Desktop\flaky\Flaky-Detector-1\a2.py", line 24, in train_autoencoder
+    X_train = (X_train - np.min(X_train)) / (np.max(X_train) - np.min(X_train))
+               ~~~~~~~~^~~~~~~~~~~~~~~~~
+  File "C:\Users\prateek.s28\AppData\Roaming\Python\Python311\site-packages\pandas\core\ops\common.py", line 81, in new_method
+    return method(self, other)
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\prateek.s28\AppData\Roaming\Python\Python311\site-packages\pandas\core\arraylike.py", line 194, in __sub__
+    return self._arith_method(other, operator.sub)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\prateek.s28\AppData\Roaming\Python\Python311\site-packages\pandas\core\frame.py", line 7457, in _arith_method
+    new_data = self._dispatch_frame_op(other, op, axis=axis)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\prateek.s28\AppData\Roaming\Python\Python311\site-packages\pandas\core\frame.py", line 7484, in _dispatch_frame_op
+    bm = self._mgr.apply(array_op, right=right)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\prateek.s28\AppData\Roaming\Python\Python311\site-packages\pandas\core\internals\managers.py", line 350, in apply
+    applied = b.apply(f, **kwargs)
+              ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\prateek.s28\AppData\Roaming\Python\Python311\site-packages\pandas\core\internals\blocks.py", line 329, in apply
+    result = func(self.values, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\prateek.s28\AppData\Roaming\Python\Python311\site-packages\pandas\core\ops\array_ops.py", line 232, in arithmetic_op
+    res_values = _na_arithmetic_op(left, right, op)  # type: ignore[arg-type]
+PS C:\Users\prateek.s28\Desktop\flaky\Flaky-Detector-1> python a2.py
+Traceback (most recent call last):
+  File "C:\Users\prateek.s28\Desktop\flaky\Flaky-Detector-1\a2.py", line 81, in <module>
+    train_autoencoder(encoded_training_data, save_path="saved_model.h5")
+  File "C:\Users\prateek.s28\Desktop\flaky\Flaky-Detector-1\a2.py", line 24, in train_autoencoder
+    X_train = (X_train - np.min(X_train)) / (np.max(X_train) - np.min(X_train))
+               ~~~~~~~~^~~~~~~~~~~~~~~~~
+  File "C:\Users\prateek.s28\AppData\Roaming\Python\Python311\site-packages\pandas\core\ops\common.py", line 81, in new_method
+    return method(self, other)
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\prateek.s28\AppData\Roaming\Python\Python311\site-packages\pandas\core\arraylike.py", line 194, in __sub__
+    return self._arith_method(other, operator.sub)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\prateek.s28\AppData\Roaming\Python\Python311\site-packages\pandas\core\frame.py", line 7457, in _arith_method
+    new_data = self._dispatch_frame_op(other, op, axis=axis)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\prateek.s28\AppData\Roaming\Python\Python311\site-packages\pandas\core\frame.py", line 7484, in _dispatch_frame_op
+    bm = self._mgr.apply(array_op, right=right)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\prateek.s28\AppData\Roaming\Python\Python311\site-packages\pandas\core\internals\managers.py", line 350, in apply
+    applied = b.apply(f, **kwargs)
+              ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\prateek.s28\AppData\Roaming\Python\Python311\site-packages\pandas\core\internals\blocks.py", line 329, in apply
+    result = func(self.values, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\prateek.s28\AppData\Roaming\Python\Python311\site-packages\pandas\core\ops\array_ops.py", line 232, in arithmetic_op
+    res_values = _na_arithmetic_op(left, right, op)  # type: ignore[arg-type]
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\prateek.s28\AppData\Roaming\Python\Python311\site-packages\pandas\core\ops\array_ops.py", line 171, in _na_arithmetic_op
+    result = func(left, right)
+             ^^^^^^^^^^^^^^^^^
+  File "C:\Users\prateek.s28\AppData\Roaming\Python\Python311\site-packages\pandas\core\computation\expressions.py", line 239, in evaluate        
+    return _evaluate(op, op_str, a, b)  # type: ignore[misc]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\prateek.s28\AppData\Roaming\Python\Python311\site-packages\pandas\core\computation\expressions.py", line 70, in _evaluate_standard
+    return op(a, b)
+           ^^^^^^^^
+TypeError: numpy boolean subtract, the `-` operator, is not supported, use the bitwise_xor, the `^` operator, or the logical_xor function instead.
+PS C:\Users\prateek.s28\Desktop\flaky\Flaky-Detector-1> 
