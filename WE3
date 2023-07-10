@@ -1,0 +1,3 @@
+   return np.asarray(self._values, dtype=dtype)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: could not convert string to float: 'Shivprasad'
