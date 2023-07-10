@@ -1,0 +1,72 @@
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import MinMaxScaler, LabelEncoder
+from tensorflow.keras.models import Model, load_model
+from tensorflow.keras.layers import Input, Dense
+from tensorflow.keras.callbacks import ModelCheckpoint
+
+def preprocess_data(file_path, le_author=None, le_files_modified=None, le_test_failed=None):
+    df = pd.read_csv(file_path)
+
+    if le_author is None:
+        le_author = LabelEncoder()
+    if le_files_modified is None:
+        le_files_modified = LabelEncoder()
+    if le_test_failed is None:
+        le_test_failed = LabelEncoder()
+
+    df['author'] = le_author.fit_transform(df['author'])
+    df['files_modified'] = le_files_modified.fit_transform(df['files_modified'])
+    df['test_failed'] = le_test_failed.fit_transform(df['test_failed'])
+
+    scaler = MinMaxScaler()
+    scaled_data = scaler.fit_transform(df)
+    return scaled_data, scaler, le_author, le_files_modified, le_test_failed
+
+def train_autoencoder_model(train_data):
+    input_dim = train_data.shape[1]
+    input_layer = Input(shape=(input_dim,))
+    encoder = Dense(16, activation="relu")(input_layer)
+    encoder = Dense(8, activation="relu")(encoder)
+    decoder = Dense(16, activation="relu")(encoder)
+    decoder = Dense(input_dim, activation="sigmoid")(decoder)
+
+    autoencoder = Model(inputs=input_layer, outputs=decoder)
+    autoencoder.compile(optimizer='adam', loss='mse')
+
+    checkpoint = ModelCheckpoint(model_save_path, save_best_only=True, verbose=1)
+    autoencoder.fit(train_data, train_data, epochs=100, batch_size=32, shuffle=True, validation_split=0.2, callbacks=[checkpoint])
+
+    return autoencoder
+
+def predict_flaky_probability(autoencoder, test_data):
+    encoder_model = Model(inputs=autoencoder.input, outputs=autoencoder.layers[4].output)
+    encoded_data = encoder_model.predict(test_data)
+    mse = np.mean(np.power(test_data - encoded_data, 2), axis=1)
+    flaky_probability = mse / np.max(mse)
+    return flaky_probability
+
+# File paths
+train_file_path = 'merged_final.csv'
+test_file_path = 'test.csv'
+output_file_path = 'output.csv'
+model_save_path = 'autoencoder_model.h5'
+
+# Preprocess and train the autoencoder model
+train_data, scaler, le_author, le_files_modified, le_test_failed = preprocess_data(train_file_path)
+autoencoder = train_autoencoder_model(train_data)
+autoencoder.save(model_save_path)
+
+# Load the trained model
+loaded_autoencoder = load_model(model_save_path)
+
+# Preprocess the test data
+test_data, _, _, _ = preprocess_data(test_file_path, le_author, le_files_modified, le_test_failed)
+
+# Predict flaky probability for the test data
+flaky_probabilities = predict_flaky_probability(loaded_autoencoder, test_data)
+
+# Save the flaky probabilities to a CSV file
+test_cases = pd.read_csv(test_file_path)['test_failed']
+result = pd.DataFrame({'test_case': test_cases, 'flaky_probability': flaky_probabilities})
+result.to_csv(output_file_path, index=False)
