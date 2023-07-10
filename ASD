@@ -1,0 +1,3 @@
+    encoded_test_data = loaded_autoencoder.encoder(test_data)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'Functional' object has no attribute 'encoder'
