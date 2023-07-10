@@ -1,0 +1,89 @@
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import MinMaxScaler, LabelEncoder
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, Dense
+from tensorflow.keras.callbacks import ModelCheckpoint
+
+def preprocess_data(file_path, le_files_modified=None, le_test_failed=None):
+    df = pd.read_csv(file_path)
+
+    if le_files_modified is None:
+        le_files_modified = LabelEncoder()
+    if le_test_failed is None:
+        le_test_failed = LabelEncoder()
+
+    df['files_modified'] = le_files_modified.fit_transform(df['files_modified'])
+    df['test_failed'] = le_test_failed.fit_transform(df['test_failed'])
+
+    scaler = MinMaxScaler()
+    scaled_data = scaler.fit_transform(df)
+    return scaled_data, scaler, le_files_modified, le_test_failed
+
+def train_autoencoder_model(train_data):
+    input_dim = train_data.shape[1]
+    input_layer = Input(shape=(input_dim,))
+    encoder = Dense(16, activation="relu")(input_layer)
+    encoder = Dense(8, activation="relu")(encoder)
+    decoder = Dense(16, activation="relu")(encoder)
+    decoder = Dense(input_dim, activation="sigmoid")(decoder)
+
+    autoencoder = Model(inputs=input_layer, outputs=decoder)
+    autoencoder.compile(optimizer='adam', loss='mse')
+
+    checkpoint = ModelCheckpoint(model_save_path, save_best_only=True, verbose=1)
+    autoencoder.fit(train_data, train_data, epochs=100, batch_size=32, shuffle=True, validation_split=0.2, callbacks=[checkpoint])
+
+    return autoencoder
+
+def build_classification_model(train_data, labels):
+    input_dim = train_data.shape[1]
+    input_layer = Input(shape=(input_dim,))
+    encoder = Dense(16, activation="relu")(input_layer)
+    encoder = Dense(8, activation="relu")(encoder)
+    encoder_output = Dense(4, activation="relu")(encoder)
+    output_layer = Dense(len(np.unique(labels)), activation="softmax")(encoder_output)
+
+    classification_model = Model(inputs=input_layer, outputs=output_layer)
+    classification_model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+
+    checkpoint = ModelCheckpoint(model_save_path, save_best_only=True, verbose=1)
+    classification_model.fit(train_data, labels, epochs=100, batch_size=32, shuffle=True, validation_split=0.2, callbacks=[checkpoint])
+
+    return classification_model
+
+# File paths
+train_file_path = 'merged_final.csv'
+test_file_path = 'test.csv'
+output_file_path = 'output.csv'
+model_save_path = 'classification_model.h5'
+
+# Preprocess and train the autoencoder model
+train_data, scaler, le_files_modified, le_test_failed = preprocess_data(train_file_path)
+autoencoder = train_autoencoder_model(train_data)
+
+# Encode the training data using the trained autoencoder
+encoded_train_data = autoencoder.encoder(train_data)
+
+# Get the corresponding labels from the training data
+labels = train_data[:, 1]  # Assuming the labels are in the second column of the training data
+
+# Train the classification model using the encoded data and labels
+classification_model = build_classification_model(encoded_train_data, labels)
+classification_model.save(model_save_path)
+
+# Load the trained model
+loaded_classification_model = load_model(model_save_path)
+
+# Preprocess the test data and encode it using the trained autoencoder
+test_data, _, _, _ = preprocess_data(test_file_path, le_files_modified, le_test_failed)
+encoded_test_data = autoencoder.encoder(test_data)
+
+# Predict the labels for the encoded test data using the classification model
+predicted_labels = loaded_classification_model.predict(encoded_test_data)
+predicted_labels = np.argmax(predicted_labels, axis=1)
+
+# Save the predicted labels to a CSV file
+test_cases = pd.read_csv(test_file_path)['test_failed']
+result = pd.DataFrame({'test_case': test_cases, 'predicted_label': predicted_labels})
+result.to_csv(output_file_path, index=False)
