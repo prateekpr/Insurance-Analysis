@@ -1,0 +1,96 @@
+import pandas as pd
+import numpy as np
+import tensorflow as tf
+from sklearn.preprocessing import MinMaxScaler, LabelEncoder
+from tensorflow.keras.models import Model, load_model
+from tensorflow.keras.layers import Input, Dense
+from tensorflow.keras.callbacks import ModelCheckpoint
+import joblib
+
+def add_unique_authors_count(df):
+    unique_authors_count = df.groupby('files_modified')['author'].nunique()
+    result_df = pd.DataFrame({'files_modified': unique_authors_count.index,
+                              'unique_authors_count': unique_authors_count.values})
+    df = pd.merge(df, result_df, on='files_modified', how='left')
+    return df
+
+def preprocess_data(file_path, le_author=None, le_files_modified=None, le_test_failed=None, scaler=None):
+    df = pd.read_csv(file_path)
+    author_count = df.groupby('files_modified')['author'].nunique().reset_index(name='unique_author_count')
+    df = df.merge(author_count, on='files_modified', how='left')
+    test_case_count = df.groupby('files_modified')['test_failed'].nunique().reset_index(name='unique_test_case_count')
+    df = df.merge(test_case_count, on='files_modified', how='left')
+    df['no_code_change'] = (df['files_modified'].isnull()).astype(int)
+    df = df.drop(columns=['author'])
+    if le_author is None:
+        le_author = LabelEncoder()
+    if le_files_modified is None:
+        le_files_modified = LabelEncoder()
+    if le_test_failed is None:
+        le_test_failed = LabelEncoder()
+    df['files_modified'] = le_files_modified.fit_transform(df['files_modified'])
+    df['test_failed'] = le_test_failed.fit_transform(df['test_failed'])
+    if scaler is None:
+        scaler = MinMaxScaler()
+    scaled_data = scaler.fit_transform(df)
+    return scaled_data, le_author, le_files_modified, le_test_failed, scaler
+
+def train_autoencoder_model(train_data):
+    input_dim = train_data.shape[1]
+    input_layer = Input(shape=(input_dim,))
+    encoder = Dense(64, activation="relu")(input_layer)
+    encoder = Dense(32, activation="relu")(encoder)
+    decoder = Dense(64, activation="relu")(encoder)
+    decoder = Dense(input_dim, activation="sigmoid")(decoder)
+    autoencoder = Model(inputs=input_layer, outputs=decoder)
+    autoencoder.compile(optimizer='adam', loss='mse')
+    checkpoint = ModelCheckpoint(model_save_path, save_best_only=True, verbose=1)
+    autoencoder.fit(train_data, train_data, epochs=100, batch_size=32, shuffle=True, validation_split=0.2, callbacks=[checkpoint])
+    return autoencoder
+
+def predict_flaky_probability(autoencoder, test_data, scaler):
+    predictions = autoencoder.predict(test_data)
+    mse = np.mean(np.power(test_data - predictions, 2), axis=1)
+    flaky_probability = mse / np.max(mse)
+    flaky_probability[np.isnan(flaky_probability)] = 0
+    flaky_probability = flaky_probability
+    return flaky_probability
+
+model_save_path = 'saved_modelnewdata.h5'
+le_author_path = 'le_author.pkl'
+le_files_modified_path = 'le_files_modified.pkl'
+le_test_failed_path = 'le_test_failed.pkl'
+scaler_path = 'scaler.pkl'
+
+# Preprocess training data
+train_data, le_author, le_files_modified, le_test_failed, scaler = preprocess_data(train_file_path)
+
+# Save label encoders and scaler
+joblib.dump(le_author, le_author_path)
+joblib.dump(le_files_modified, le_files_modified_path)
+joblib.dump(le_test_failed, le_test_failed_path)
+joblib.dump(scaler, scaler_path)
+
+# Train the autoencoder model
+autoencoder = train_autoencoder_model(train_data)
+autoencoder.save(model_save_path)
+
+# Load label encoders and scaler
+le_author = joblib.load(le_author_path)
+le_files_modified = joblib.load(le_files_modified_path)
+le_test_failed = joblib.load(le_test_failed_path)
+scaler = joblib.load(scaler_path)
+
+# Preprocess testing data
+test_data, _, _, _, _ = preprocess_data(test_file_path, le_author, le_files_modified, le_test_failed, scaler)
+
+# Load the trained model
+loaded_autoencoder = load_model(model_save_path)
+
+# Predict flaky probability for new test cases
+flaky_probabilities = predict_flaky_probability(loaded_autoencoder, test_data, scaler)
+
+# Save the flaky probabilities to a CSV file
+test_cases = pd.read_csv(test_file_path)['test_failed']
+result = pd.DataFrame({'test_case': test_cases, 'flaky_probability': flaky_probabilities})
+result.to_csv(output_file_path, index=False)
