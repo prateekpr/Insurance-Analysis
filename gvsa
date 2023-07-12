@@ -1,0 +1,767 @@
+import pandas as pd
+
+import numpy as np
+
+import tensorflow as tf
+
+from sklearn.preprocessing import MinMaxScaler, LabelEncoder
+
+from tensorflow.keras.models import Model, load_model
+
+from tensorflow.keras.layers import Input, Dense
+
+from tensorflow.keras.callbacks import ModelCheckpoint
+
+import joblib
+
+
+
+
+# def add_unique_authors_count(df):
+
+#     unique_authors_count = df.groupby('files_modified')['author'].nunique()
+
+#     result_df = pd.DataFrame({'files_modified': unique_authors_count.index,
+
+#                               'unique_authors_count': unique_authors_count.values})
+
+#     df = pd.merge(df, result_df, on='files_modified', how='left')
+
+#     return df
+
+
+
+
+def preprocess_data(file_path, le_files_modified=None, le_test_failed=None, scaler=None):
+
+    df = pd.read_csv(file_path)
+
+    df = df.drop(columns=['author'])
+
+    # author_count = df.groupby('files_modified')['author'].nunique().reset_index(name='unique_author_count')
+
+    # df = df.merge(author_count, on='files_modified', how='left')
+
+    # test_case_count = df.groupby('files_modified')['test_failed'].nunique().reset_index(name='unique_test_case_count')
+
+    # df = df.merge(test_case_count, on='files_modified', how='left')
+
+    # df['no_code_change'] = (df['files_modified'].isnull()).astype(int)
+
+    # df = df.drop(columns=['author'])
+
+    # if le_author is None:
+
+    #     le_author = LabelEncoder()
+
+    if le_files_modified is None:
+
+        le_files_modified = LabelEncoder()
+
+    if le_test_failed is None:
+
+        le_test_failed = LabelEncoder()
+
+    df['files_modified'] = le_files_modified.fit_transform(df['files_modified'])
+
+    df['test_failed'] = le_test_failed.fit_transform(df['test_failed'])
+
+
+
+
+    print(df)
+
+    if scaler is None:
+
+        scaler = MinMaxScaler()
+
+    scaled_data = scaler.fit_transform(df)
+
+    return scaled_data, le_files_modified, le_test_failed, scaler
+
+def preprocess_data_test(file_path, le_files_modified, le_test_failed, scaler):
+
+    df = pd.read_csv(file_path)
+
+    df = df.drop(columns=['author'])
+
+    # author_count = df.groupby('files_modified')['author'].nunique().reset_index(name='unique_author_count')
+
+    # df = df.merge(author_count, on='files_modified', how='left')
+
+    # test_case_count = df.groupby('files_modified')['test_failed'].nunique().reset_index(name='unique_test_case_count')
+
+    # df = df.merge(test_case_count, on='files_modified', how='left')
+
+    # df['no_code_change'] = (df['files_modified'].isnull()).astype(int)
+
+    # df = df.drop(columns=['author'])
+
+    # if le_author is None:
+
+    #     le_author = LabelEncoder()
+
+    #     le_author.fit(df['author'])
+
+    if le_files_modified is None:
+
+        le_files_modified = LabelEncoder()
+
+        le_files_modified.fit(df['files_modified'])
+
+    if le_test_failed is None:
+
+        le_test_failed = LabelEncoder()
+
+        le_test_failed.fit(df['test_failed'])
+
+    df['files_modified'] = le_files_modified.transform(df['files_modified'])
+
+    df['test_failed'] = le_test_failed.transform(df['test_failed'])
+
+
+
+
+    print(df)
+
+    if scaler is None:
+
+        scaler = MinMaxScaler()
+
+    scaled_data = scaler.fit_transform(df)
+
+    return scaled_data, le_files_modified, le_test_failed, scaler
+
+def train_autoencoder_model(train_data):
+
+    input_dim = train_data.shape[1]
+
+    input_layer = Input(shape=(input_dim,))
+
+    encoder = Dense(64, activation="relu")(input_layer)
+
+    encoder = Dense(32, activation="relu")(encoder)
+
+    decoder = Dense(64, activation="relu")(encoder)
+
+    decoder = Dense(input_dim, activation="sigmoid")(decoder)
+
+    autoencoder = Model(inputs=input_layer, outputs=decoder)
+
+    autoencoder.compile(optimizer='adam', loss='mse')
+
+    checkpoint = ModelCheckpoint(model_save_path, save_best_only=True, verbose=1)
+
+    autoencoder.fit(train_data, train_data, epochs=100, batch_size=32, shuffle=True, validation_split=0.2, callbacks=[checkpoint])
+
+    return autoencoder
+
+
+
+
+def predict_flaky_probability(autoencoder, test_data, scaler):
+
+    predictions = autoencoder.predict(test_data)
+
+    mse = np.mean(np.power(test_data - predictions, 2), axis=1)
+
+    flaky_probability = mse / np.max(mse)
+
+    flaky_probability[np.isnan(flaky_probability)] = 0
+
+    flaky_probability = flaky_probability
+
+    return flaky_probability
+
+
+
+
+model_save_path = 'saved_modelfinal.h5'
+
+
+
+
+le_files_modified_path = 'le_files_modified.pkl'
+
+le_test_failed_path = 'le_test_failed.pkl'
+
+scaler_path = 'scaler.pkl'
+
+train_file_path='merged 60data1.csv'
+
+test_file_path='try60_3.csv'
+
+output_file_path='new.csv'
+
+# Preprocess training data
+
+train_data, le_files_modified, le_test_failed, scaler = preprocess_data(train_file_path)
+
+# print(le_author)
+
+# print(le_files_modified)
+
+# print(le_test_failed)
+
+# print(scaler)
+
+# Save label encoders and scaler
+
+
+
+
+joblib.dump(le_files_modified, le_files_modified_path)
+
+joblib.dump(le_test_failed, le_test_failed_path)
+
+joblib.dump(scaler, scaler_path)
+
+
+
+
+
+
+# Train the autoencoder model
+
+# autoencoder = train_autoencoder_model(train_data)
+
+# autoencoder.save(model_save_path)
+
+
+
+
+# Load label encoders and scaler
+
+
+
+
+le_files_modified = joblib.load(le_files_modified_path)
+
+le_test_failed = joblib.load(le_test_failed_path)
+
+scaler = joblib.load(scaler_path)
+
+
+
+
+# Preprocess testing data
+
+test_data, _, _, _ = preprocess_data_test(test_file_path, le_files_modified, le_test_failed, scaler)
+
+
+
+
+# Load the trained model
+
+loaded_autoencoder = load_model(model_save_path)
+
+
+
+
+# Predict flaky probability for new test cases
+
+flaky_probabilities = predict_flaky_probability(loaded_autoencoder, test_data, scaler)
+
+
+
+
+# Save the flaky probabilities to a CSV file
+
+test_cases = pd.read_csv(test_file_path)['test_failed']
+
+result = pd.DataFrame({'test_case': test_cases, 'flaky_probability': flaky_probabilities})
+
+result.to_csv(output_file_path, index=False)
+we have build this model to detect flakytest cases we have trained with a dataset converted it into a number using label encoder and we are using the same values while testing so that if a test case arrives it must  convert into encoded values check for the training encoded values which are saved whether that test_failed are related to class modified like if we pass 
+files_modified,author,test_failed
+Class 8,Shivprasad,TC007
+Class 10,Ishani Dubey,TC003
+Class 9,Prateek Srivastava,TC016
+while testing the model must check if the encoded values of tgest failed are related to encoded values of class 8 ,class 10 and class 9 which will result in less flakyness and if less related high flakyness but we are not getting desired output
+
+
+
+test_failed,files_modified
+0,6
+0,5
+0,10
+0,1
+1,7
+1,6
+1,4
+2,9
+2,8
+2,4
+3,5
+3,9
+3,0
+4,1
+4,6
+4,10
+5,11
+5,4
+5,7
+6,8
+6,1
+6,11
+7,0
+7,10
+7,7
+8,8
+8,5
+8,11
+9,0
+9,4
+9,9
+9,1
+10,2
+10,4
+11,6
+11,0
+11,4
+12,6
+12,7
+12,5
+13,0
+13,3
+13,11
+13,5
+13,0
+14,4
+14,0
+14,6
+14,7
+14,10
+15,9
+15,10
+15,11
+15,1
+15,7
+16,3
+16,7
+16,11
+16,0
+17,2
+17,9
+17,8
+17,1
+17,4
+9,5
+9,11
+9,7
+9,8
+9,6
+9,10
+9,2
+9,3
+18,7
+19,10
+19,9
+19,11
+19,1
+19,7
+20,4
+20,5
+20,8
+20,10
+21,0
+21,6
+21,1
+22,7
+22,11
+22,4
+22,9
+23,0
+23,8
+23,1
+24,7
+24,6
+24,5
+25,9
+25,10
+25,11
+25,1
+26,4
+26,11
+26,0
+27,8
+27,10
+27,7
+27,4
+27,9
+28,2
+28,9
+28,8
+28,1
+29,2
+29,9
+29,11
+29,7
+30,8
+30,1
+30,5
+30,0
+31,4
+31,0
+31,6
+31,7
+31,10
+32,2
+32,9
+32,8
+32,1
+33,4
+33,0
+33,8
+33,7
+34,3
+34,7
+34,11
+34,0
+34,5
+35,4
+35,6
+35,1
+35,11
+36,10
+36,9
+36,11
+36,1
+37,4
+37,6
+37,1
+38,7
+38,11
+38,5
+38,8
+39,0
+39,10
+39,8
+39,1
+40,9
+40,1
+40,4
+40,7
+41,0
+41,10
+41,7
+41,4
+41,9
+42,8
+42,2
+42,11
+42,1
+43,3
+43,7
+43,11
+43,0
+43,5
+44,4
+44,0
+44,8
+44,7
+44,10
+45,2
+45,9
+45,8
+45,1
+46,9
+46,11
+46,1
+46,7
+47,8
+47,1
+47,4
+47,0
+47,9
+48,3
+48,8
+48,11
+48,0
+49,4
+49,6
+49,1
+49,11
+50,10
+50,9
+50,11
+50,1
+51,4
+51,6
+51,1
+52,7
+52,11
+52,5
+52,8
+52,0
+53,4
+53,8
+53,7
+53,10
+54,2
+54,9
+54,8
+54,1
+55,9
+55,11
+55,1
+55,7
+56,8
+56,1
+56,4
+56,0
+57,2
+57,9
+57,8
+57,1
+58,9
+58,11
+58,1
+58,7
+59,8
+59,1
+59,4
+59,0
+59,9
+60,3
+60,8
+60,11
+60,0
+61,4
+61,6
+61,1
+61,11
+62,2
+62,9
+62,8
+62,1
+63,9
+63,11
+63,1
+63,7
+64,8
+64,1
+64,4
+64,0
+65,2
+65,9
+65,11
+65,7
+66,1
+66,10
+66,11
+66,9
+67,4
+67,6
+67,8
+67,1
+67,0
+68,4
+68,0
+68,6
+68,7
+68,10
+69,2
+69,9
+69,8
+69,1
+70,9
+70,11
+70,1
+70,7
+71,8
+71,1
+71,4
+71,0
+71,9
+72,3
+72,8
+72,11
+72,0
+73,4
+73,6
+73,1
+73,11
+74,2
+74,9
+74,8
+74,1
+75,9
+75,11
+75,1
+75,7
+76,8
+76,1
+76,4
+76,0
+76,9
+77,3
+77,8
+77,11
+77,0
+78,4
+78,6
+78,1
+78,11
+79,2
+79,9
+79,8
+79,1
+80,9
+80,11
+80,1
+80,7
+81,8
+81,1
+81,4
+81,0
+81,9
+82,3
+82,8
+82,11
+82,0
+82,5
+83,4
+83,8
+83,7
+83,10
+84,2
+84,9
+84,8
+84,1
+85,9
+85,11
+85,1
+85,7
+86,8
+86,1
+86,4
+86,0
+86,9
+87,3
+87,8
+87,11
+87,0
+88,4
+88,6
+88,1
+88,11
+89,2
+89,9
+89,8
+89,1
+90,9
+90,11
+90,1
+90,7
+91,8
+91,1
+91,4
+91,0
+91,9
+92,3
+92,8
+92,11
+92,0
+92,5
+93,4
+93,8
+93,7
+93,10
+94,2
+94,9
+94,8
+94,1
+95,9
+95,11
+95,1
+95,7
+96,8
+96,1
+96,4
+96,0
+96,9
+97,3
+97,8
+97,11
+97,0
+98,4
+98,6
+98,1
+98,11
+99,2
+99,9
+99,8
+99,1
+100,9
+100,11
+100,1
+100,7
+101,8
+101,1
+101,4
+101,0
+101,9
+102,3
+102,8
+102,11
+102,0
+102,5
+103,4
+103,8
+103,7
+103,10
+104,2
+104,9
+104,8
+104,1
+105,9
+105,11
+105,1
+105,7
+106,8
+106,1
+106,4
+106,0
+106,9
+107,3
+107,8
+107,11
+107,0
+107,5
+108,4
+108,8
+108,7
+108,10
+109,2
+109,9
+109,8
+109,1
+110,9
+110,11
+110,1
+110,7
+111,8
+111,1
+111,4
+111,0
+111,9
+112,3
+112,8
+112,11
+112,0
+112,5
+113,4
+113,8
+113,7
+these are the encoded values which we recieved on training
+and these for testing
+  files_modified  test_failed
+0               7            5
+1              10           11
+2               5            7
+3               3            3
+so here the model must check if test case encoded values
+7,5 
+10,11
+5,7
