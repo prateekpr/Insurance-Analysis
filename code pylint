@@ -1,0 +1,41 @@
+Function Naming Convention: Enforce a specific naming convention for functions, such as using snake_case or camelCase.
+
+Class Naming Convention: Enforce a specific naming convention for classes, such as using PascalCase.
+
+Comment Density: Enforce a minimum amount of comments/documentation per function or class to ensure code clarity.
+
+Magic Number Detection: Detect and warn about the presence of "magic numbers" (unexplained constants) in code.
+
+Code Duplication: Detect duplicated code blocks and suggest refactoring them into reusable functions or modules.
+
+Hardcoded Strings: Detect hardcoded strings that should be replaced with constants or configuration values.
+
+Code Complexity: Set a threshold for cyclomatic complexity and warn when functions or methods exceed it.
+
+Unreachable Code: Detect code that can never be executed, such as unreachable branches or code after a return statement.
+
+Unused Variables: Extend the unused import detection to include unused variables within functions or modules.
+
+Type Annotations: Enforce type annotations for function parameters, return values, and variables.
+
+Deprecation Warnings: Detect usage of deprecated functions, methods, or modules.
+
+Sensitive Data Exposure: Detect potential exposure of sensitive data, such as hardcoding passwords or API keys.
+
+File Organization: Enforce a specific file structure or organization, like requiring certain modules to be grouped in specific directories.
+
+Custom Logging Rules: Detect inappropriate or insecure usage of logging statements.
+
+Import Ordering: Enforce a specific order for importing modules, such as grouping third-party libraries separately.
+
+String Formatting: Detect improper string formatting or concatenation, promoting the use of f-strings or string formatting methods.
+
+Exception Handling: Enforce consistent and appropriate exception handling practices, including specifying exception types to catch.
+
+File Length Limit: Warn when a single file exceeds a certain number of lines of code.
+
+Code Formatting: Extend your extension to detect code formatting issues beyond what Pylint handles.
+
+Consistent Naming: Ensure consistent naming conventions for variables, functions, and classes across the project.
+
+
